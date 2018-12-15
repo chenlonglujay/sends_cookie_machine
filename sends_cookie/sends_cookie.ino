@@ -4,6 +4,7 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   Serial.println(F("start"));
+  systme_parameter_initial(&SYS_state);
   CLPMTR_initial();
   Timer4_initial();
   Timer5_initial();
@@ -211,14 +212,12 @@ ISR (TIMER5_OVF_vect) {
   TCNT5 = Timer5CountSet[timer5set];
   if (clp_motor_set.DIR == clp_motor_set.CW) {
     //CW has no limit sensor to check
-    //Serial.println(F( "CW"));
     if (clp_motor_set.pulse_count >= clp_motor_set.set_step)  {
       clp_motor_set.arrive = true;
       clp_motor_set.pulse_count = 0;
     }
   } else if (clp_motor_set.DIR == clp_motor_set.CCW) {
     //CCW has limit sensor to chceck
-    //Serial.println(F( "CCW"));
     if (SYS_state.limit_sensor_state) {
       clp_motor_set.arrive = true;
       clp_motor_set.pulse_count = 0;
@@ -240,9 +239,4 @@ void set_motor_DIR(bool DIR) {
   }
 }
 
-void systme_parameter_initial() {
-  SYS_state.limit_sensor_state = false;  //true: senses something
-  SYS_state.prevent_startup_into_ISR = false;
-  SYS_state.zero_ok = false;
-}
 

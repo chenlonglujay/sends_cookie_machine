@@ -87,4 +87,9 @@ struct system_state {
     bool zero_ok;
 } SYS_state;
 
+void systme_parameter_initial(struct system_state *input) {
+  input->limit_sensor_state = false;  //true: senses something
+  input->prevent_startup_into_ISR = false;
+  input->zero_ok = false;
+}
 #endif
