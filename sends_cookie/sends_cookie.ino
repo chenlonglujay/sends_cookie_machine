@@ -54,7 +54,7 @@ void  thread_initial() {
   controll.add(&DCMTR_thread);  // Add DCMTR__thread to the controller
 
   CLPMTR_thread.onRun(CLPMTR_thread_Callback);
-  CLPMTR_thread.setInterval(100);
+  CLPMTR_thread.setInterval(30);
   controll.add(&CLPMTR_thread);  // Add CLRMTR_thread to the controller
 
   limit_sensor_thread.onRun(limit_sensor_thread_Callback);
@@ -72,7 +72,8 @@ void DCMTR_thread_Callback() {
          delay(1000);       
          DCMTR_stop_board() ;  
          delay(2000);      
-         TimerStart();
+         clp_motor_set.DIR = clp_motor_set.CW;
+         clp_motor_set.motor_run = true;
     }
 }
 
@@ -145,12 +146,11 @@ void change_dir_move_ISR() {
   if (SYS_state.prevent_startup_into_ISR) {
     static unsigned long last_interrupt_time = 0;
     unsigned long interrupt_time = millis();
-    if (interrupt_time - last_interrupt_time > 200 && SYS_state.zero_ok) {
-      //first press button motor needs turn CW direction
-      //Serial.println(F( "interrupt"));
-      clp_motor_set.DIR_state  = !clp_motor_set.DIR_state ;
+    if (interrupt_time - last_interrupt_time > 200 && SYS_state.zero_ok) {     
+      //Serial.println(F( "interrupt"));      
       set_motor_DIR(clp_motor_set.DIR_state);
       clp_motor_set.motor_run = true;
+      clp_motor_set.DIR_state  = clp_motor_set.CCW ;
     }
     last_interrupt_time = interrupt_time;
   }
@@ -259,7 +259,7 @@ void set_motor_DIR(bool DIR) {
 }
 
 void DCMTR_push_board() {
-  analogWrite( DC_motor_ENB, 25.0);
+  analogWrite( DC_motor_ENB, 250);
    digitalWrite(DC_motor_IN3, LOW);
    digitalWrite(DC_motor_IN4, HIGH);
   
