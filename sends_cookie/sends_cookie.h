@@ -33,7 +33,9 @@ Thread  limit_sensor_thread = Thread();
 #endif
 
 #define limit_sensor 37
-#define DC_motor 7
+#define DC_motor_ENB 52
+#define DC_motor_IN4 6
+#define DC_motor_IN3 5
 
 //Button pin  sets interrupt
 #define control_BTN 2     
@@ -62,11 +64,16 @@ struct  CLPMTR_control {
 }  clp_motor_set;
 
 struct DCMTR_control {
-  bool arrive;
-  bool DIR;
-  bool timer_count;  
+  bool push_cookie_ok;
 } dc_motor_set;
 
+
+ void DCMTR_initial(struct DCMTR_control *input) {
+    input->push_cookie_ok = false;
+    pinMode(DC_motor_IN4, OUTPUT);
+    pinMode(DC_motor_IN3, OUTPUT);
+    analogWrite(DC_motor_ENB, 0);  
+ }
 
 #define goto_eat_cookie_steps 5500  //for CW
 #define global_pulse goto_eat_cookie_steps*1.6
@@ -85,11 +92,15 @@ struct system_state {
     bool limit_sensor_state;     //true: senses something
     bool prevent_startup_into_ISR;
     bool zero_ok;
+    uint8_t  action;
+    enum{dcm_release = 0, dcm_push , clpm_run};
 } SYS_state;
 
 void systme_parameter_initial(struct system_state *input) {
   input->limit_sensor_state = false;  //true: senses something
   input->prevent_startup_into_ISR = false;
   input->zero_ok = false;
+  input->action  = input->dcm_release;
 }
+
 #endif

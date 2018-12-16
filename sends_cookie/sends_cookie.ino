@@ -6,6 +6,12 @@ void setup() {
   Serial.println(F("start"));
   systme_parameter_initial(&SYS_state);
   CLPMTR_initial();
+  DCMTR_initial(&dc_motor_set);
+#if 0
+  DCMTR_release_board() ;     //according to our machine release board function couldn't work
+  delay(5000);     //delay for dc motor to release board
+  DCMTR_stop_board();
+#endif 
   Timer4_initial();
   Timer5_initial();
   limit_sensor_initial();
@@ -14,14 +20,12 @@ void setup() {
 #if turn_therad_state
   thread_initial();
 #endif
-  delay(1000);     //delay wait for CLP motor and driver
-  //Serial.println(F("before to  set zero point"));
+  Serial.println(F("before to  set zero point"));
   bool state = digitalRead(limit_sensor);   //high :senses something
   if (!state) {
     CLPMTR_JogStepSet(clp_motor_set.DIR, 0) ; //CLPMTR goto zero point
   }
-  //Serial.println(F("set zero point ok"));
-  //DC_motor
+  Serial.println(F("set zero point ok")); 
 }
 
 void loop() {
@@ -60,12 +64,23 @@ void  thread_initial() {
 #endif
 
 void DCMTR_thread_Callback() {
-
+  if(SYS_state.action == SYS_state.dcm_push && !dc_motor_set.push_cookie_ok ) {
+        TimerStop();
+         DCMTR_push_board() ;  
+         SYS_state.action = SYS_state.clpm_run;
+         dc_motor_set.push_cookie_ok = true;
+         delay(1000);       
+         DCMTR_stop_board() ;  
+         delay(2000);      
+         TimerStart();
+    }
 }
 
 void CLPMTR_thread_Callback() {
   if (clp_motor_set.motor_run) {
+#if log_print
     Serial.println("motor_run: true");
+#endif
     CLPMTR_JogStepSet(clp_motor_set.DIR, 0);
     clp_motor_set.motor_run = false;    //clp_motor_set.motor_run that can change state when next press button
   }
@@ -75,23 +90,27 @@ void limit_sensor_thread_Callback() {
   bool state = digitalRead(limit_sensor);   //high :senses something
 
   if (state) {
-    //went to zero point first time when system power on
-    if (!SYS_state.prevent_startup_into_ISR) {
-      SYS_state.prevent_startup_into_ISR = true;
-      SYS_state.zero_ok  = true;
-      clp_motor_set.DIR_state  = !clp_motor_set.DIR_state ;
-    }
+              //went to zero point first time when system power on
+              if (!SYS_state.prevent_startup_into_ISR) {
+                SYS_state.prevent_startup_into_ISR = true;
+                SYS_state.zero_ok  = true;
+                clp_motor_set.DIR_state  = !clp_motor_set.DIR_state ;
+              }              
+              SYS_state.action  = SYS_state.dcm_push;
+              
 #if log_print
-    Serial.print("limit_senses_state:");
-    Serial.println("senses something");
+            Serial.print("limit_senses_state:");
+            Serial.println("senses something");
 #endif
   } else {
+            SYS_state.action =SYS_state.clpm_run;
+            dc_motor_set.push_cookie_ok = false;  
 #if log_print
-    Serial.print("limit_senses_state:");
-    Serial.println("senses nothing");
+            Serial.print("limit_senses_state:");
+            Serial.println("senses nothing");
 #endif
   }
-
+ 
   SYS_state.limit_sensor_state = state;
 }
 //timer set and CLPM StepSet
@@ -239,4 +258,22 @@ void set_motor_DIR(bool DIR) {
   }
 }
 
+void DCMTR_push_board() {
+  analogWrite( DC_motor_ENB, 25.0);
+   digitalWrite(DC_motor_IN3, LOW);
+   digitalWrite(DC_motor_IN4, HIGH);
+  
+}
+
+void DCMTR_release_board() {
+  analogWrite( DC_motor_ENB, 200); 
+  digitalWrite(DC_motor_IN3, HIGH);
+  digitalWrite(DC_motor_IN4, LOW);
+}
+
+void DCMTR_stop_board() {
+  analogWrite(DC_motor_ENB, 0);
+  digitalWrite(DC_motor_IN3, HIGH);
+  digitalWrite(DC_motor_IN4, LOW);
+}
 
